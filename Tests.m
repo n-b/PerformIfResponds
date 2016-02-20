@@ -30,6 +30,11 @@
     
     // Then
     XCTAssertEqualObjects(sut.existingObject, @"foo");
+
+    // When
+    sut.performIfResponds.existingBOOL = YES;
+
+    XCTAssertEqual(sut.existingBOOL, YES);
 }
 
 - (void)testCorrectlyMasks
@@ -50,7 +55,7 @@
     SampleClass* sut = [SampleClass new];
 
     // Then
-    XCTAssertEqualObjects([sut performOr:@"foo"].fakeObject, @"foo");
+    XCTAssertEqualObjects([sut performOrReturn:@"foo"].fakeObject, @"foo");
 }
 
 - (void)testDoesntLeak
@@ -62,13 +67,12 @@
     // When
     @autoreleasepool {
         weakObject = NSDate.date.description;
-        __unused id result = [sut performOr:weakObject].fakeObject;
+        __unused id result = [sut performOrReturn:weakObject].fakeObject;
     }
     
     // Then
     XCTAssertNil(weakObject);
 }
-
 
 - (void)testPOD
 {
@@ -76,11 +80,9 @@
     SampleClass* sut = [SampleClass new];
 
     // Then
-    XCTAssertEqual([sut performOrValue(YES)].fakeBOOL, YES);
-    
-    XCTAssertEqual([sut performOrValue(CGRectMake(0, 0, 0, 42))].fakeRect.size.height, 42);
-
-    XCTAssertEqual([sut performOrValue(CGRectMake(0, 0, 0, 42))].fakeRect.size.height, 42);
+    XCTAssertEqual([sut performOrReturn(YES)].fakeBOOL, YES);
+    XCTAssertEqual([sut performOrReturn(CGRectMake(0, 0, 0, 42))].fakeRect.size.height, 42);
+    XCTAssertEqual([sut performOrReturn(@"yolo")].fakeObject, @"yolo");
 }
 
 @end

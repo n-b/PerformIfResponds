@@ -19,6 +19,7 @@
 
 @implementation Demo_Delegate
 
+
 - (void)testDemoDelegate
 {
     SampleDelegate *delegate = [SampleDelegate new];
@@ -31,7 +32,8 @@
     // It works when returning a value, too:
     XCTAssertNoThrow([delegate.performIfResponds valueForBar:self]);
     // The default is returning nil, which may not be appropriate:
-    XCTAssertEqual([[delegate performOr:@"hello"] valueForBar:self], @"hello");
+    
+    XCTAssertEqual([[delegate performOrReturn:@"hello"] valueForBar:self], @"hello");
 }
 
 @end

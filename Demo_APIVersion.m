@@ -20,7 +20,7 @@
     // Instead of:
     XCTAssertThrows(NSProcessInfo.processInfo.quantumState);
     // Call new methods through performIfResponds
-    XCTAssertNoThrow([NSProcessInfo.processInfo performOr:nil].quantumState);
+    XCTAssertNoThrow([NSProcessInfo.processInfo performOrReturn:nil].quantumState);
 }
 
 @end

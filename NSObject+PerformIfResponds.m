@@ -1,78 +1,78 @@
 #import "NSObject+PerformIfResponds.h"
+#import <objc/runtime.h>
 
-@interface CATPerformProxy : NSProxy
+id _BoxedValue(const void * bytes_, const char* type_) {
+    id value = [NSValue valueWithBytes:bytes_ objCType:type_];
+    objc_setAssociatedObject(value, "box", @0, OBJC_ASSOCIATION_RETAIN);
+    return value;
+}
+
+@interface PerformProxy : NSObject
+@property id target;
+@property const char * returnType;
+@property id returnValue;
 @end
 
-@implementation CATPerformProxy
-{
-    id _target;
+@implementation NSObject (PerformProxy)
 
-    id _obj;
-    NSValue * _value;
-    NSString *_types;
+- (instancetype)performIfResponds
+{
+    PerformProxy * proxy = [PerformProxy new];
+    proxy.target = self;
+    proxy.returnType = @encode(void);
+    return proxy;
 }
 
-- (id)initWithTarget:(id)target_
+- (instancetype)performOrReturn:(id)value_
 {
-    _target = target_;
-    _types = [self selectorTypesForReturnType:@encode(void)];
-    return self;
+    PerformProxy * proxy = [PerformProxy new];
+    proxy.target = self;
+    proxy.returnValue = value_;
+    if(objc_getAssociatedObject(value_, "box")) {
+        proxy.returnType = [value_ objCType];
+    } else {
+        proxy.returnType = @encode(id);
+    }
+    return proxy;
 }
 
-- (id)withObject:(id)value_
-{
-    _obj = value_;
-    _types = [self selectorTypesForReturnType:@encode(id)];
-    return self;
-}
+@end
 
-- (id)withNSValue:(NSValue*)pod_
-{
-    _value = pod_;
-    _types = [self selectorTypesForReturnType:pod_.objCType];
-    return self;
-}
+@implementation PerformProxy
 
-- (NSString *)selectorTypesForReturnType:(const char *)type_
+- (id)forwardingTargetForSelector:(SEL)sel_
 {
-    return [NSString stringWithFormat:@"%s%s%s",type_,@encode(id),@encode(SEL)];
+    if ([_target respondsToSelector:sel_]) {
+        return _target;
+    } else {
+        return self;
+    }
 }
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)sel_
 {
-    if ([_target respondsToSelector:sel_]) {
-        return [_target methodSignatureForSelector:sel_];
-    } else {
-        return [NSMethodSignature signatureWithObjCTypes:_types.UTF8String];
-    }
+    NSAssert(![_target respondsToSelector:sel_], @"forwardingTargetForSelector: should have forwarded");
+    return [NSMethodSignature signatureWithObjCTypes:
+            [NSString stringWithFormat:@"%s%s%s",_returnType,@encode(id),@encode(SEL)].UTF8String];
 }
 
 - (void)forwardInvocation:(NSInvocation *)invocation_
 {
-    if ([_target respondsToSelector:invocation_.selector]) {
-        [invocation_ invokeWithTarget:_target];
-    } else if (_obj) {
-        [invocation_ setReturnValue:&_obj];
-    } else if(_value) {
-        char buf[invocation_.methodSignature.methodReturnLength];
-        [_value getValue:&buf];
-        [invocation_ setReturnValue:&buf];
+    NSAssert(![_target respondsToSelector:invocation_.selector], @"forwardingTargetForSelector: should have forwarded");
+    if (strcmp(_returnType,@encode(void))) {
+        // return placeholder value
+        if(objc_getAssociatedObject(_returnValue, "box")) {
+            // boxed literal
+            char buf[invocation_.methodSignature.methodReturnLength];
+            [_returnValue getValue:&buf];
+            [invocation_ setReturnValue:&buf];
+        } else {
+            // id
+            [invocation_ setReturnValue:&_returnValue];
+        }
+    } else {
+        // void
     }
 }
 
-@end
-
-@implementation NSObject (CATCompatibilityProxy)
-- (instancetype)performIfResponds
-{
-    return (id)[[CATPerformProxy alloc] initWithTarget:self];
-}
-- (instancetype)performOr:(id)obj_;
-{
-    return (id)[[[CATPerformProxy alloc] initWithTarget:self] withObject:obj_];
-}
-- (instancetype)_performOrValue:(NSValue*)value_
-{
-    return (id)[[[CATPerformProxy alloc] initWithTarget:self] withNSValue:value_];
-}
 @end
