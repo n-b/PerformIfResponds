@@ -1,44 +1,59 @@
 #import "NSObject+PerformIfResponds.h"
-#import <objc/runtime.h>
-
-id _BoxedValue(const void * bytes_, const char* type_) {
-    id value = [NSValue valueWithBytes:bytes_ objCType:type_];
-    objc_setAssociatedObject(value, "box", @0, OBJC_ASSOCIATION_RETAIN);
-    return value;
-}
 
 @interface PerformProxy : NSObject
-@property id target;
-@property const char * returnType;
-@property id returnValue;
+
+- (id) initWithTarget:(nonnull id)target_
+           returnType:(nonnull const char*)returnType_
+   returnValueHandler:(nonnull void(^)(NSInvocation*))handler_;
+
 @end
 
 @implementation NSObject (PerformProxy)
 
 - (instancetype)performIfResponds
 {
-    PerformProxy * proxy = [PerformProxy new];
-    proxy.target = self;
-    proxy.returnType = @encode(void);
-    return proxy;
+    return [[PerformProxy alloc] initWithTarget:self returnType:@encode(void)
+                             returnValueHandler:^(NSInvocation* invocation_){}];
 }
 
-- (instancetype)performOrReturn:(id)value_
+- (instancetype)performOrReturn:(id)object_
 {
-    PerformProxy * proxy = [PerformProxy new];
-    proxy.target = self;
-    proxy.returnValue = value_;
-    if(objc_getAssociatedObject(value_, "box")) {
-        proxy.returnType = [value_ objCType];
-    } else {
-        proxy.returnType = @encode(id);
-    }
-    return proxy;
+    return [[PerformProxy alloc] initWithTarget:self returnType:@encode(id)
+                             returnValueHandler:^(NSInvocation* invocation_){
+                                 id obj = object_;
+                                 [invocation_ setReturnValue:&obj];
+                             }];
+}
+
+- (instancetype)performOrReturnValue:(NSValue*)value_
+{
+    return [[PerformProxy alloc] initWithTarget:self returnType:value_.objCType
+                             returnValueHandler:^(NSInvocation* invocation_){
+                                 char buf[invocation_.methodSignature.methodReturnLength];
+                                 [value_ getValue:&buf];
+                                 [invocation_ setReturnValue:&buf];
+                             }];
 }
 
 @end
 
 @implementation PerformProxy
+{
+    id _target;
+    const char * _returnType;
+    void(^_returnValueHandler)(NSInvocation* invocation_);
+}
+
+- (id) initWithTarget:(nonnull id)target_
+           returnType:(nonnull const char*)returnType_
+   returnValueHandler:(nonnull void(^)(NSInvocation*))handler_
+{
+    self = [super init];
+    _target = target_;
+    _returnType = returnType_;
+    _returnValueHandler = handler_;
+    return self;
+}
 
 - (id)forwardingTargetForSelector:(SEL)sel_
 {
@@ -51,28 +66,13 @@ id _BoxedValue(const void * bytes_, const char* type_) {
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)sel_
 {
-    NSAssert(![_target respondsToSelector:sel_], @"forwardingTargetForSelector: should have forwarded");
     return [NSMethodSignature signatureWithObjCTypes:
             [NSString stringWithFormat:@"%s%s%s",_returnType,@encode(id),@encode(SEL)].UTF8String];
 }
 
 - (void)forwardInvocation:(NSInvocation *)invocation_
 {
-    NSAssert(![_target respondsToSelector:invocation_.selector], @"forwardingTargetForSelector: should have forwarded");
-    if (strcmp(_returnType,@encode(void))) {
-        // return placeholder value
-        if(objc_getAssociatedObject(_returnValue, "box")) {
-            // boxed literal
-            char buf[invocation_.methodSignature.methodReturnLength];
-            [_returnValue getValue:&buf];
-            [invocation_ setReturnValue:&buf];
-        } else {
-            // id
-            [invocation_ setReturnValue:&_returnValue];
-        }
-    } else {
-        // void
-    }
+    _returnValueHandler(invocation_);
 }
 
 @end

@@ -2,9 +2,16 @@
 #import "NSObject+PerformIfResponds.h"
 
 // Test API
+
+typedef struct __attribute__((objc_boxable)) {
+    int i;
+} some_struct;
+
 @interface SampleClass : NSObject
 @property id existingObject;
 @property BOOL existingBOOL;
+@property CGRect existingRect;
+@property some_struct existingStruct;
 @end
 @implementation SampleClass
 @end
@@ -13,61 +20,90 @@
 @property id fakeObject;
 @property BOOL fakeBOOL;
 @property CGRect fakeRect;
+@property some_struct fakeStruct;
 @end
 
-@interface PerformIfRespondsTests : XCTestCase
+@interface PerformIfRespondsUsageTests : XCTestCase
 @end
 
-@implementation PerformIfRespondsTests
+@implementation PerformIfRespondsUsageTests
 
 - (void)testCorrectlyForwards
 {
     // Given
-    SampleClass* sut = [SampleClass new];
+    SampleClass* subject = [SampleClass new];
     
     // When
-    sut.performIfResponds.existingObject = @"foo";
-    
+    subject.performIfResponds.existingObject = @"foo";
     // Then
-    XCTAssertEqualObjects(sut.existingObject, @"foo");
+    XCTAssertEqualObjects(subject.existingObject, @"foo");
+    XCTAssertEqualObjects(subject.performIfResponds.existingObject, @"foo");
 
     // When
-    sut.performIfResponds.existingBOOL = YES;
+    subject.performIfResponds.existingBOOL = YES;
+    // Then
+    XCTAssertEqual(subject.existingBOOL, YES);
+    XCTAssertEqual(subject.performIfResponds.existingBOOL, YES);
 
-    XCTAssertEqual(sut.existingBOOL, YES);
+    // When
+    subject.performIfResponds.existingRect = CGRectMake(1,2,3,4);
+    // Then
+    XCTAssertTrue(CGRectEqualToRect(subject.existingRect,CGRectMake(1,2,3,4)));
+    XCTAssertTrue(CGRectEqualToRect(subject.performIfResponds.existingRect,CGRectMake(1,2,3,4)));
+
+    // When
+    subject.performIfResponds.existingStruct = (some_struct){42};
+    // Then
+    XCTAssertEqual(subject.existingStruct.i,42);
+    XCTAssertEqual(subject.performIfResponds.existingStruct.i,42);
 }
 
 - (void)testCorrectlyMasks
 {
     // Given
-    SampleClass* sut = [SampleClass new];
+    SampleClass* subject = [SampleClass new];
 
     // When
-    XCTAssertThrows(sut.fakeObject = @"foo");
-    
+    XCTAssertThrows([subject setFakeObject:@"foo"]);
     // Then
-    XCTAssertNoThrow(sut.performIfResponds.fakeObject = @"foo");
+    XCTAssertNoThrow([subject.performIfResponds setFakeObject:@"foo"]);
 }
 
-- (void)testCorrectlyReturns
+- (void)testCorrectlyReturnsDefaultValue
 {
     // Given
-    SampleClass* sut = [SampleClass new];
+    SampleClass* subject = [SampleClass new];
 
     // Then
-    XCTAssertEqualObjects([sut performOrReturn:@"foo"].fakeObject, @"foo");
+    XCTAssertEqualObjects([subject performOrReturn:@"foo"].fakeObject, @"foo");
+
+    // Then
+    XCTAssertEqual([subject performOrReturnValue:@YES].fakeBOOL, YES);
+
+    // Then
+    XCTAssertTrue(CGRectEqualToRect([subject performOrReturnValue:[NSValue valueWithRect:CGRectMake(1,2,3,4)]].fakeRect, CGRectMake(1,2,3,4)));
+
+    // Then
+    XCTAssertEqual([subject performOrReturnValue:@((some_struct){42})].fakeStruct.i, 42);
 }
 
-- (void)testDoesntLeak
+@end
+
+@interface PerformIfRespondsSanityTests : XCTestCase
+@end
+
+@implementation PerformIfRespondsSanityTests
+
+- (void)testDoesntLeakReturnedObject
 {
     // Given
-    SampleClass* sut = [SampleClass new];
+    SampleClass* subject = [SampleClass new];
     id __weak weakObject;
 
     // When
     @autoreleasepool {
         weakObject = NSDate.date.description;
-        __unused id result = [sut performOrReturn:weakObject].fakeObject;
+        __unused id result = [subject performOrReturn:weakObject].fakeObject;
     }
     
     // Then
@@ -77,12 +113,12 @@
 - (void)testPOD
 {
     // Given
-    SampleClass* sut = [SampleClass new];
+    SampleClass* subject = [SampleClass new];
 
     // Then
-    XCTAssertEqual([sut performOrReturn(YES)].fakeBOOL, YES);
-    XCTAssertEqual([sut performOrReturn(CGRectMake(0, 0, 0, 42))].fakeRect.size.height, 42);
-    XCTAssertEqual([sut performOrReturn(@"yolo")].fakeObject, @"yolo");
+    XCTAssertEqual([subject performOrReturnValue:@YES].fakeBOOL, YES);
+    XCTAssertThrows([subject performOrReturnValue:[NSValue valueWithRect:CGRectMake(0, 0, 0, 42)]].fakeObject); // WOOO CRASH AND BURN
+    XCTAssertEqual([subject performOrReturn:@"yolo"].fakeObject, @"yolo");
 }
 
 @end
