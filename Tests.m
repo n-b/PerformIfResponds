@@ -3,7 +3,7 @@
 
 // Test API
 
-typedef struct __attribute__((objc_boxable)) {
+typedef struct __attribute__((objc_boxable)) { // lol new in Xcode 7.3!
     int i;
 } some_struct;
 
@@ -110,15 +110,26 @@ typedef struct __attribute__((objc_boxable)) {
     XCTAssertNil(weakObject);
 }
 
-- (void)testPOD
+- (void)testYOLO
 {
-    // Given
+    // There’s absolutely no type safety in NSObject+PerformIfResponds.
+    // These cases explode in very funny ways.
     SampleClass* subject = [SampleClass new];
 
-    // Then
-    XCTAssertEqual([subject performOrReturnValue:@YES].fakeBOOL, YES);
-    XCTAssertThrows([subject performOrReturnValue:[NSValue valueWithRect:CGRectMake(0, 0, 0, 42)]].fakeObject); // WOOO CRASH AND BURN
-    XCTAssertEqual([subject performOrReturn:@"yolo"].fakeObject, @"yolo");
+    // BOOL instead of struct
+    XCTAssertThrows([subject performOrReturnValue:@YES].fakeRect);
+    // id instead of struct
+    XCTAssertThrows([subject performOrReturn:@"hello"].fakeRect);
+
+    // struct instead of id
+    XCTAssertThrows([subject performOrReturnValue:[NSValue valueWithRect:CGRectMake(0, 0, 0, 42)]].fakeObject);
+    // BOOL instead of id
+    XCTAssertThrows([subject performOrReturnValue:@YES].fakeObject);
+
+    // struct instead of BOOL
+    XCTAssertThrows([subject performOrReturnValue:[NSValue valueWithRect:CGRectMake(0, 0, 0, 42)]].fakeBOOL);
+    // id instead of BOOL
+    XCTAssertThrows([subject performOrReturn:@"hello"].fakeBOOL);
 }
 
 @end
