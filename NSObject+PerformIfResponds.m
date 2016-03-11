@@ -1,6 +1,6 @@
 #import "NSObject+PerformIfResponds.h"
 
-@interface PerformProxy : NSObject
+@interface PerformProxy : NSProxy
 
 - (id) initWithTarget:(nonnull id)target_
            returnType:(nonnull const char*)returnType_
@@ -12,27 +12,27 @@
 
 - (instancetype)performIfResponds
 {
-    return [[PerformProxy alloc] initWithTarget:self returnType:@encode(void)
-                             returnValueHandler:^(NSInvocation* invocation_){}];
+    return (id)[[PerformProxy alloc] initWithTarget:self returnType:@encode(void)
+                                 returnValueHandler:^(NSInvocation* invocation_){}];
 }
 
 - (instancetype)performOrReturn:(id)object_
 {
-    return [[PerformProxy alloc] initWithTarget:self returnType:@encode(id)
-                             returnValueHandler:^(NSInvocation* invocation_){
-                                 id obj = object_;
-                                 [invocation_ setReturnValue:&obj];
-                             }];
+    return (id)[[PerformProxy alloc] initWithTarget:self returnType:@encode(id)
+                                 returnValueHandler:^(NSInvocation* invocation_){
+                                     id obj = object_;
+                                     [invocation_ setReturnValue:&obj];
+                                 }];
 }
 
 - (instancetype)performOrReturnValue:(NSValue*)value_
 {
-    return [[PerformProxy alloc] initWithTarget:self returnType:value_.objCType
-                             returnValueHandler:^(NSInvocation* invocation_){
-                                 char buf[invocation_.methodSignature.methodReturnLength];
-                                 [value_ getValue:&buf];
-                                 [invocation_ setReturnValue:&buf];
-                             }];
+    return (id)[[PerformProxy alloc] initWithTarget:self returnType:value_.objCType
+                                 returnValueHandler:^(NSInvocation* invocation_){
+                                     char buf[invocation_.methodSignature.methodReturnLength];
+                                     [value_ getValue:&buf];
+                                     [invocation_ setReturnValue:&buf];
+                                 }];
 }
 
 @end
@@ -48,7 +48,6 @@
            returnType:(nonnull const char*)returnType_
    returnValueHandler:(nonnull void(^)(NSInvocation*))handler_
 {
-    self = [super init];
     _target = target_;
     _returnType = returnType_;
     _returnValueHandler = handler_;
@@ -66,8 +65,8 @@
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)sel_
 {
-    return [NSMethodSignature signatureWithObjCTypes:
-            [NSString stringWithFormat:@"%s%s%s",_returnType,@encode(id),@encode(SEL)].UTF8String];
+    NSString * types = [NSString stringWithFormat:@"%s%s%s",_returnType,@encode(id),@encode(SEL)];
+    return [NSMethodSignature signatureWithObjCTypes:types.UTF8String];
 }
 
 - (void)forwardInvocation:(NSInvocation *)invocation_
