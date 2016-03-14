@@ -14,6 +14,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		370D9BBA1C975D0600B300C3 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		378ED0F71C3E47D400F890BD /* NSObject+PerformIfResponds.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSObject+PerformIfResponds.h"; sourceTree = "<group>"; };
 		378ED0F81C3E47D400F890BD /* NSObject+PerformIfResponds.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSObject+PerformIfResponds.m"; sourceTree = "<group>"; };
 		378ED0FA1C3E47DC00F890BD /* Tests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Tests.m; sourceTree = "<group>"; };
@@ -37,6 +38,7 @@
 		378ED0E41C3E47BB00F890BD = {
 			isa = PBXGroup;
 			children = (
+				370D9BBA1C975D0600B300C3 /* README.md */,
 				378ED0F71C3E47D400F890BD /* NSObject+PerformIfResponds.h */,
 				378ED0F81C3E47D400F890BD /* NSObject+PerformIfResponds.m */,
 				378ED10A1C3E497E00F890BD /* Demo_Delegate.m */,
